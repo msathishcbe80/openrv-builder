@@ -1,0 +1,55 @@
+name: Build OpenRV for Windows
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Install dependencies
+      shell: powershell
+      run: |
+        choco install -y cmake ninja git python3
+        RefreshEnv
+
+    - name: Download FFmpeg binaries
+      shell: powershell
+      run: |
+        curl -L -o ffmpeg.zip https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip
+        tar -xf ffmpeg.zip -C .
+        Rename-Item -Path (Get-ChildItem -Directory | Where-Object { $_.Name -like "ffmpeg*" }).FullName -NewName "ffmpeg"
+
+    - name: Clone OpenRV
+      run: git clone --recursive https://github.com/AcademySoftwareFoundation/OpenRV.git
+
+    - name: Build OpenRV
+      shell: powershell
+      run: |
+        cd OpenRV
+        mkdir build
+        cd build
+        cmake .. -G "Visual Studio 17 2022" -A x64 `
+          -DCMAKE_INSTALL_PREFIX=$env:USERPROFILE\openrv_win `
+          -DFFMPEG_INCLUDE_DIR=$env:GITHUB_WORKSPACE\ffmpeg\include `
+          -DFFMPEG_LIBRARY_DIR=$env:GITHUB_WORKSPACE\ffmpeg\lib `
+          -DUSE_OPENIMAGEIO=OFF `
+          -DUSE_OCIO=OFF `
+          -DCMAKE_BUILD_TYPE=Release
+        cmake --build . --config Release --target INSTALL
+
+    - name: Archive OpenRV
+      shell: powershell
+      run: |
+        cd $env:USERPROFILE
+        Compress-Archive -Path openrv_win -DestinationPath openrv-windows.zip
+
+    - name: Upload Windows Binary
+      uses: actions/upload-artifact@v3
+      with:
+        name: OpenRV-Windows
+        path: ${{ env.USERPROFILE }}\openrv-windows.zip

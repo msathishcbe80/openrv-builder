@@ -1,0 +1,64 @@
+name: Build OpenRV with FFmpeg
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Repo
+      uses: actions/checkout@v3
+
+    - name: Install Dependencies
+      run: |
+        sudo apt update
+        sudo apt install -y build-essential cmake ninja-build git \
+          yasm nasm pkg-config libtool autoconf automake \
+          libgl1-mesa-dev libx11-dev libxext-dev libxrandr-dev \
+          libxi-dev libxinerama-dev libxcursor-dev libxss-dev \
+          libasound2-dev libpulse-dev python3 python3-pip \
+          libopenexr-dev libopenimageio-dev \
+          libx264-dev libx265-dev libvpx-dev libfdk-aac-dev \
+          libmp3lame-dev libopus-dev libxvidcore-dev \
+          zlib1g-dev libbz2-dev libssl-dev libffi-dev
+
+    - name: Build FFmpeg
+      run: |
+        git clone https://github.com/FFmpeg/FFmpeg.git
+        cd FFmpeg
+        ./configure --prefix=$HOME/ffmpeg_install \
+          --enable-gpl --enable-nonfree \
+          --enable-libx264 --enable-libx265 --enable-libvpx \
+          --enable-libfdk-aac --enable-libmp3lame \
+          --enable-libopus --enable-libxvid --enable-shared
+        make -j$(nproc)
+        make install
+
+    - name: Build OpenRV
+      run: |
+        git clone --recursive https://github.com/AcademySoftwareFoundation/OpenRV.git
+        cd OpenRV
+        mkdir build && cd build
+        cmake .. -G Ninja \
+          -DCMAKE_BUILD_TYPE=Release \
+          -DFFMPEG_INCLUDE_DIR=$HOME/ffmpeg_install/include \
+          -DFFMPEG_LIBRARY_DIR=$HOME/ffmpeg_install/lib \
+          -DUSE_OPENIMAGEIO=ON \
+          -DUSE_OCIO=OFF \
+          -DCMAKE_INSTALL_PREFIX=$HOME/openrv_install
+        ninja
+        ninja install
+
+    - name: Archive OpenRV
+      run: |
+        tar -czvf openrv-linux.tar.gz -C $HOME/openrv_install .
+
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: OpenRV-Binary
+        path: openrv-linux.tar.gz

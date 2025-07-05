@@ -32,4 +32,33 @@ jobs:
         cd FFmpeg
         ./configure --prefix=$HOME/ffmpeg_install \
           --enable-gpl --enable-nonfree \
-          --enable-libx2
+          --enable-libx264 --enable-libx265 --enable-libvpx \
+          --enable-libfdk-aac --enable-libmp3lame \
+          --enable-libopus --enable-libxvid --enable-shared
+        make -j$(nproc)
+        make install
+
+    - name: Build OpenRV
+      run: |
+        git clone --recursive https://github.com/AcademySoftwareFoundation/OpenRV.git
+        cd OpenRV
+        mkdir build && cd build
+        cmake .. -G Ninja \
+          -DCMAKE_BUILD_TYPE=Release \
+          -DFFMPEG_INCLUDE_DIR=$HOME/ffmpeg_install/include \
+          -DFFMPEG_LIBRARY_DIR=$HOME/ffmpeg_install/lib \
+          -DUSE_OPENIMAGEIO=ON \
+          -DUSE_OCIO=OFF \
+          -DCMAKE_INSTALL_PREFIX=$HOME/openrv_install
+        ninja
+        ninja install
+
+    - name: Archive OpenRV
+      run: |
+        tar -czvf openrv-linux.tar.gz -C $HOME/openrv_install .
+
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: OpenRV-Linux
+        path: openrv-linux.tar.gz

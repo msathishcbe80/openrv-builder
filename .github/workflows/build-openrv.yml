@@ -41,7 +41,7 @@ jobs:
     - name: Download Qt 5.15.2 Prebuilt
       run: |
         mkdir -p $HOME/qt
-        curl -L -o qt.tar.xz https://mirrors.ocf.berkeley.edu/qt/archive/qt/5.15/5.15.2/qt-opensource-linux-x64-5.15.2-gcc_64.tar.xz
+        curl -L -o qt.tar.xz https://github.com/msathishcbe80/openrv-deps/releases/download/qt5152/qt-opensource-linux-x64-5.15.2-gcc_64.tar.xz
         mkdir -p $HOME/qt/extract
         tar -xf qt.tar.xz -C $HOME/qt/extract
         mv $HOME/qt/extract/5.15.2/gcc_64 $HOME/qt/qt5

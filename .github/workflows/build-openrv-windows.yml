@@ -15,14 +15,17 @@ jobs:
       shell: powershell
       run: |
         choco install -y cmake ninja git python3
-        RefreshEnv
 
     - name: Download FFmpeg binaries
       shell: powershell
       run: |
         curl -L -o ffmpeg.zip https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip
-        tar -xf ffmpeg.zip -C .
+        Expand-Archive -Path ffmpeg.zip -DestinationPath .
         Rename-Item -Path (Get-ChildItem -Directory | Where-Object { $_.Name -like "ffmpeg*" }).FullName -NewName "ffmpeg"
+
+    - name: Set FFmpeg to PATH
+      run: |
+        echo "${{ github.workspace }}\ffmpeg\bin" | Out-File -Append -Encoding ascii $env:GITHUB_PATH
 
     - name: Clone OpenRV
       run: git clone --recursive https://github.com/AcademySoftwareFoundation/OpenRV.git
@@ -35,8 +38,8 @@ jobs:
         cd build
         cmake .. -G "Visual Studio 17 2022" -A x64 `
           -DCMAKE_INSTALL_PREFIX=$env:USERPROFILE\openrv_win `
-          -DFFMPEG_INCLUDE_DIR=$env:GITHUB_WORKSPACE\ffmpeg\include `
-          -DFFMPEG_LIBRARY_DIR=$env:GITHUB_WORKSPACE\ffmpeg\lib `
+          -DFFMPEG_INCLUDE_DIR=${{ github.workspace }}\ffmpeg\include `
+          -DFFMPEG_LIBRARY_DIR=${{ github.workspace }}\ffmpeg\lib `
           -DUSE_OPENIMAGEIO=OFF `
           -DUSE_OCIO=OFF `
           -DCMAKE_BUILD_TYPE=Release

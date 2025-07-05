@@ -1,4 +1,4 @@
-name: Build OpenRV with FFmpeg
+name: Build OpenRV with FFmpeg and Qt
 
 on:
   push:
@@ -24,7 +24,7 @@ jobs:
           libopenexr-dev libopenimageio-dev \
           libx264-dev libx265-dev libvpx-dev libfdk-aac-dev \
           libmp3lame-dev libopus-dev libxvidcore-dev \
-          zlib1g-dev libbz2-dev libssl-dev libffi-dev
+          zlib1g-dev libbz2-dev libssl-dev libffi-dev unzip curl
 
     - name: Build FFmpeg
       run: |
@@ -38,6 +38,13 @@ jobs:
         make -j$(nproc)
         make install
 
+    - name: Download Qt 5.15.2 Prebuilt
+      run: |
+        mkdir -p $HOME/qt
+        curl -L -o qt.tar.xz https://download.qt.io/archive/qt/5.15/5.15.2/qt-opensource-linux-x64-5.15.2-gcc_64.tar.xz
+        tar -xf qt.tar.xz -C $HOME/qt
+        mv $HOME/qt/5.15.2/gcc_64 $HOME/qt/qt5
+
     - name: Build OpenRV
       run: |
         git clone --recursive https://github.com/AcademySoftwareFoundation/OpenRV.git
@@ -49,6 +56,7 @@ jobs:
           -DFFMPEG_LIBRARY_DIR=$HOME/ffmpeg_install/lib \
           -DUSE_OPENIMAGEIO=ON \
           -DUSE_OCIO=OFF \
+          -DRV_DEPS_QT5_LOCATION=$HOME/qt/qt5 \
           -DCMAKE_INSTALL_PREFIX=$HOME/openrv_install
         ninja
         ninja install
